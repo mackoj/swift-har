@@ -24,18 +24,22 @@ A Swift package that exports HTTP traffic as HAR 1.2 JSON, scoped to representin
 - `gh` GraphQL is unavailable; use `gh api` REST calls for pull requests (`/pulls/{n}/ccr/ready_for_review`, `PUT /pulls/{n}/merge`). Job logs are not downloadable from the sandbox; reproduce soundness checks locally (see below).
 - DocC check locally: copy the tree, then run swiftlang/github-workflows' `check-docs.sh --doc-targets HARKit HARKitURLSession` in `swift:6.3` with `--network host`, the proxy variables and `GIT_SSL_CAINFO=/root/.ccr/ca-bundle.crt` mounted.
 - API breakage locally: `swift package diagnose-api-breaking-changes origin/main` in `swift:6.2`.
+- Linux has no availability checking, so APIs newer than macOS 13 / iOS 16 (e.g. `String(validating:as:)`, macOS 15) only fail in the macOS CI job. Check availability of every new stdlib/Foundation API.
+- DocC symbol links (` ``HAR/Request`` `) do not resolve across modules: in `HARKitURLSession`, refer to `HARKit` symbols in plain code spans.
+- swift-corelibs-foundation rewrites header-name case in `HTTPURLResponse` (`ETag` → `Etag`); compare names case-insensitively in tests.
 
 ## Done
 
 - PR #1 (merged): repository scaffolding: manifest, CI and soundness workflows, constraints, coding standards, glossary, ADRs, this file.
-- PR #2: `HARKit` models for every HAR 1.2 object, JSON serialization (`HAR.Archive.jsonData`, `init(json:)`), builders `HAR.Request(method:url:httpVersion:headers:body:)`, `HAR.Response(status:statusText:httpVersion:headers:body:)`, `HAR.Content(body:mimeType:)`, `HAR.PostData(body:mimeType:)`, throwing `HAR.Timings`, cookie parsing (`Cookie`, `Set-Cookie`, RFC 6265 dates); README with usage, missing-data guidance and specification notes; `ReadmeTests`.
+- PR #2 (merged): `HARKit` models for every HAR 1.2 object, JSON serialization (`HAR.Archive.jsonData`, `init(json:)`), builders `HAR.Request(method:url:httpVersion:headers:body:)`, `HAR.Response(status:statusText:httpVersion:headers:body:)`, `HAR.Content(body:mimeType:)`, `HAR.PostData(body:mimeType:)`, throwing `HAR.Timings`, cookie parsing (`Cookie`, `Set-Cookie`, RFC 6265 dates); README with usage, missing-data guidance and specification notes; `ReadmeTests`.
+
+- PR #3: `HARKitURLSession`: `HAR.Request(_ URLRequest, httpVersion:)` (throws `HAR.URLRequestError.missingURL`), `HAR.Response(_ HTTPURLResponse, body:httpVersion:)`, `HAR.Timings(_ URLSessionTaskTransactionMetrics)` (compiles on Linux too; the date mapping is an internal initializer tested with `@testable`); README "From URLSession" section and its README test.
 
 ## In progress
 
-- Merging PR #2 once CI is green.
+- Merging PR #3 once CI is green, then tagging `0.1.0`.
 
 ## Next
 
-1. `HARKitURLSession`: `HAR.Request(_ URLRequest, httpVersion:)`, `HAR.Response(_ HTTPURLResponse, body:httpVersion:)`, Darwin `HAR.Timings(_ URLSessionTaskTransactionMetrics)`.
-2. README section for `HARKitURLSession` and its README tests.
-3. Tag `0.1.0` once CI is green on main.
+1. Tag `0.1.0` on main and publish release notes (consider a `CHANGELOG.md`, as swift-arazzo's developer-experience review recommends).
+2. Ideas, not committed to: HAR 1.3 `postData.encoding` behind an explicit opt-in; an optional redaction helper for `Authorization`/`Cookie` headers; DocC catalog with a getting-started article.
