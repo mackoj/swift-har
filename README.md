@@ -19,6 +19,8 @@ dependencies: [
 targets: [
     .target(name: "MyApp", dependencies: [
         .product(name: "HARKit", package: "swift-har"),
+        // or, to convert URLRequest, HTTPURLResponse and task metrics:
+        .product(name: "HARKitURLSession", package: "swift-har"),
     ]),
 ]
 ```
@@ -102,6 +104,39 @@ for entry in archive.log.entries {
 ```
 
 Decoding is lenient, so files from browsers and proxies load. A byte order mark, custom `_fields` and unknown fields are ignored. Values HAR 1.2 forbids but other writers produce, such as `-1` in `timings.send`, are kept.
+
+### From URLSession
+
+`HARKitURLSession` converts URLSession's types. It re-exports `HARKit`.
+
+```swift
+import HARKitURLSession
+
+/// Call from `urlSession(_:task:didFinishCollecting:)` with the body you received.
+func harEntry(task: URLSessionTask, body: Data, metrics: URLSessionTaskMetrics) throws -> HAR.Entry? {
+    guard let sent = task.currentRequest ?? task.originalRequest,
+        let received = task.response as? HTTPURLResponse,
+        let transaction = metrics.transactionMetrics.last,
+        let timings = HAR.Timings(transaction)
+    else { return nil }
+    let httpVersion = transaction.networkProtocolName ?? ""
+    return HAR.Entry(
+        startedDateTime: transaction.fetchStartDate ?? metrics.taskInterval.start,
+        request: try HAR.Request(sent, httpVersion: httpVersion),
+        response: HAR.Response(received, body: body, httpVersion: httpVersion),
+        timings: timings
+    )
+}
+```
+
+Some details come from how URLSession works:
+
+- **Headers are sorted by name.** `URLRequest` and `HTTPURLResponse` keep neither the order nor the repetitions of headers. Foundation joins repeated `Set-Cookie` headers with commas, and they are split back into separate cookies.
+- **Cookies and headers URLSession adds while sending** (from `HTTPCookieStorage`, `Accept-Encoding`, `User-Agent`) are not in `currentRequest` and so are missing.
+- **`statusText` is empty**, because `HTTPURLResponse` has no reason phrase.
+- **An `httpBodyStream` body** is left out, with `bodySize: -1`, because reading it would consume it.
+- **The response body URLSession delivers is decompressed**, so `bodySize` is `-1` when the response had a `Content-Encoding`.
+- **`HAR.Timings(_:)` maps a `URLSessionTaskTransactionMetrics`.** It returns `nil` when the transaction recorded no request and response dates, as for a response served from the local cache, or when they are out of order. `dns`, `connect` and `ssl` are `-1` on a reused connection. Phase durations are rounded to the microsecond. swift-corelibs-foundation records few metrics on Linux, so there you usually supply timings yourself.
 
 ## When data is missing
 
