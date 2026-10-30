@@ -49,7 +49,16 @@ func percentDecoded<S: StringProtocol>(_ string: S, plusAsSpace: Bool = false) -
             bytes.append(byte)
         }
     }
-    return String(validating: bytes, as: UTF8.self) ?? String(string)
+    return utf8String(bytes) ?? String(string)
+}
+
+/// The bytes as a string if they are valid UTF-8, `nil` otherwise.
+///
+/// `String(validating:as:)` would do, but it needs macOS 15 / iOS 18: decoding replaces invalid
+/// sequences with U+FFFD, so the bytes are valid exactly when they survive the round trip.
+func utf8String<Bytes: Collection<UInt8>>(_ bytes: Bytes) -> String? {
+    let string = String(decoding: bytes, as: UTF8.self)
+    return string.utf8.elementsEqual(bytes) ? string : nil
 }
 
 private func hexValue(_ byte: UInt8) -> UInt8? {
@@ -112,6 +121,6 @@ struct MediaType {
     /// The body as text when the media type is textual and the bytes are valid UTF-8.
     func text(of body: Data) -> String? {
         guard isTextual, allowsUTF8 else { return nil }
-        return String(validating: body, as: UTF8.self)
+        return utf8String(body)
     }
 }

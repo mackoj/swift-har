@@ -168,9 +168,11 @@ struct ArchiveTests {
         let archive = HAR.Archive(log: HAR.Log(creator: HAR.Creator(name: "a", version: "1"), entries: [entry]))
 
         // When
-        let text = try #require(String(validating: try archive.jsonData(), as: UTF8.self))
+        let data = try archive.jsonData()
+        let text = String(decoding: data, as: UTF8.self)
 
         // Then
+        #expect(text.utf8.elementsEqual(data))
         #expect(text.contains("café ☕️"))
         #expect(text.contains(#""url":"https://example.com/caf%C3%A9""#))
     }
