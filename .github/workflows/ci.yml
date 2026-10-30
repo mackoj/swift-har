@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  linux:
+    name: Linux (Swift ${{ matrix.swift }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        swift: ["6.0", "6.1", "6.2"]
+    container: swift:${{ matrix.swift }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test
+      - name: Release build
+        run: swift build -c release
+      - name: HARKit links no full Foundation
+        run: ./scripts/check-foundation-imports.sh
+
+  macos:
+    name: macOS
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Build
+        run: swift build --build-tests
+      - name: Test
+        run: swift test
