@@ -93,6 +93,17 @@ struct RequestTests {
         #expect(try request(url).queryString.isEmpty)
     }
 
+    @Test func headerNamesAreComparedAsUnicodeLowercase() throws {
+        // Given: RFC 9110 §5.1 names are case-insensitive; U+212A KELVIN SIGN lowercases to `k`.
+        let headers = [header("COOKIE", "a=1"), header("Coo\u{212A}ie", "b=2"), header("Cookies", "c=3")]
+
+        // When
+        let request = try request("https://example.com/", headers: headers)
+
+        // Then
+        #expect(request.cookies == [HAR.Cookie(name: "a", value: "1"), HAR.Cookie(name: "b", value: "2")])
+    }
+
     @Test func cookiesAreParsedFromCookieHeaders() throws {
         // Given
         let headers = [header("cookie", "a=1; b=x=y;c=\"quoted\""), header("Cookie", "d=; flag"), header("X", "e=5")]

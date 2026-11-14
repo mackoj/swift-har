@@ -115,6 +115,33 @@ struct ArchiveTests {
         #expect(json["startedDateTime"] == .string(expected))
     }
 
+    @Test func datesAgreeWithTheISO8601FormatStyle() throws {
+        // Given: dates across 1900 to 9999, which are written and read without a format style, and the
+        // edges of that range (1900-01-01, the last millisecond of 9999, 2000-02-29, before 1900).
+        let edges: [Double] = [
+            -2_208_988_800, -2_208_988_799.9996, 253_402_300_799.999, 951_782_400, 951_868_799.5, -2_208_988_800.5,
+        ]
+        let dates = edges + Array(stride(from: -2_208_988_800.0, to: 253_402_300_800, by: 12_345_678.901))
+
+        for seconds in dates {
+            // When
+            let page = HAR.Page(startedDateTime: Date(timeIntervalSince1970: seconds), id: "p", title: "")
+            let written = try encodedJSON(page)["startedDateTime"]
+            let read = try roundTripped(page).startedDateTime
+
+            // Then: the same text and date as formatting whole seconds with the style and adding milliseconds.
+            let milliseconds = (seconds * 1000).rounded()
+            let whole = (milliseconds / 1000).rounded(.down)
+            let fraction = String(Int(milliseconds - whole * 1000))
+            let wholeText = Date.ISO8601FormatStyle().format(Date(timeIntervalSince1970: whole))
+            let digits = String(repeating: "0", count: 3 - fraction.count) + fraction
+            let expectedDate = try Date(wholeText, strategy: Date.ISO8601FormatStyle())
+            let expectedFraction = try #require(Double("0." + digits))
+            #expect(written == .string("\(wholeText.dropLast()).\(digits)Z"))
+            #expect(read == expectedDate.addingTimeInterval(expectedFraction))
+        }
+    }
+
     @Test func entriesAreSortedByStartTimeKeepingTheOrderOfTies() throws {
         // Given: HAR 1.2 `entries` prefers export sorted by startedDateTime, oldest first.
         let late = try makeEntry(startedDateTime: exampleDate.addingTimeInterval(5))

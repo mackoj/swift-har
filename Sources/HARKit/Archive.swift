@@ -24,8 +24,9 @@ extension HAR {
         /// HAR 1.2 forbids but other writers produce (such as `-1` in a required timing) are kept.
         public init(json data: Data) throws {
             let bom: [UInt8] = [0xEF, 0xBB, 0xBF]
-            let body = data.starts(with: bom) ? data.dropFirst(bom.count) : data[...]
-            self = try JSONDecoder().decode(Archive.self, from: Data(body))
+            // Only a file with a byte order mark is copied.
+            let body = data.starts(with: bom) ? Data(data.dropFirst(bom.count)) : data
+            self = try JSONDecoder().decode(Archive.self, from: body)
         }
 
         /// The archive as UTF-8 JSON, with keys sorted so that the same archive always produces the

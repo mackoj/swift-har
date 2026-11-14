@@ -7,14 +7,48 @@ import Foundation
 extension [HAR.Header] {
     /// The value of the first header with this name, compared case-insensitively (RFC 9110 §5.1).
     func value(named name: String) -> String? {
-        let name = name.lowercased()
-        return first { $0.name.lowercased() == name }?.value
+        first { $0.name.isCaseInsensitivelyEqual(to: name) }?.value
     }
 
     func values(named name: String) -> [String] {
-        let name = name.lowercased()
-        return filter { $0.name.lowercased() == name }.map(\.value)
+        filter { $0.name.isCaseInsensitivelyEqual(to: name) }.map(\.value)
     }
+}
+
+extension StringProtocol {
+    /// `lowercased() == other.lowercased()`, without allocating when both are ASCII, as header and
+    /// attribute names are.
+    func isCaseInsensitivelyEqual(to other: some StringProtocol) -> Bool {
+        let ascii = utf8.withContiguousStorageIfAvailable { lhs in
+            other.utf8.withContiguousStorageIfAvailable { rhs in asciiCaseInsensitiveEquality(lhs, rhs) }
+        }
+        if case let result??? = ascii { return result }
+        // Unicode lowercasing maps a few non-ASCII characters to ASCII letters (U+212A KELVIN SIGN is
+        // `k`), so anything but ASCII is compared as `lowercased()` does.
+        return lowercased() == other.lowercased()
+    }
+}
+
+/// Whether two ASCII strings are equal ignoring case; `nil` when the answer depends on a non-ASCII
+/// byte.
+private func asciiCaseInsensitiveEquality(
+    _ lhs: UnsafeBufferPointer<UInt8>, _ rhs: UnsafeBufferPointer<UInt8>
+)
+    -> Bool?
+{
+    func folded(_ byte: UInt8) -> UInt8 {
+        (UInt8(ascii: "A")...UInt8(ascii: "Z")).contains(byte) ? byte | 0x20 : byte
+    }
+    for index in 0..<min(lhs.count, rhs.count) {
+        let a = lhs[index]
+        let b = rhs[index]
+        guard a < 0x80, b < 0x80 else { return nil }
+        // Lowercasing maps an ASCII character to one ASCII character, so the strings differ here.
+        guard folded(a) == folded(b) else { return false }
+    }
+    if lhs.count == rhs.count { return true }
+    let longer = lhs.count > rhs.count ? lhs : rhs
+    return longer[min(lhs.count, rhs.count)] < 0x80 ? false : nil
 }
 
 extension StringProtocol where SubSequence == Substring {
@@ -34,6 +68,9 @@ extension StringProtocol where SubSequence == Substring {
 /// A malformed escape (`%zz`, a trailing `%`) or a result that is not UTF-8 leaves the whole
 /// string as written, so nothing is lost or replaced with U+FFFD.
 func percentDecoded<S: StringProtocol>(_ string: S, plusAsSpace: Bool = false) -> String {
+    guard string.utf8.contains(where: { $0 == UInt8(ascii: "%") || (plusAsSpace && $0 == UInt8(ascii: "+")) }) else {
+        return String(string)
+    }
     var bytes: [UInt8] = []
     var input = Array(string.utf8)[...]
     while let byte = input.popFirst() {
@@ -57,8 +94,18 @@ func percentDecoded<S: StringProtocol>(_ string: S, plusAsSpace: Bool = false) -
 /// `String(validating:as:)` would do, but it needs macOS 15 / iOS 18: decoding replaces invalid
 /// sequences with U+FFFD, so the bytes are valid exactly when they survive the round trip.
 func utf8String<Bytes: Collection<UInt8>>(_ bytes: Bytes) -> String? {
+    if let string = bytes.withContiguousStorageIfAvailable(utf8String(buffer:)) { return string }
     let string = String(decoding: bytes, as: UTF8.self)
     return string.utf8.elementsEqual(bytes) ? string : nil
+}
+
+/// `utf8String(_:)` on contiguous bytes, where both passes run over buffers instead of a generic
+/// iterator.
+private func utf8String(buffer: UnsafeBufferPointer<UInt8>) -> String? {
+    let string = String(decoding: buffer, as: UTF8.self)
+    let isValid =
+        string.utf8.withContiguousStorageIfAvailable { $0.elementsEqual(buffer) } ?? string.utf8.elementsEqual(buffer)
+    return isValid ? string : nil
 }
 
 private func hexValue(_ byte: UInt8) -> UInt8? {
@@ -92,7 +139,7 @@ struct MediaType {
         charset =
             parts.dropFirst().lazy.compactMap { parameter -> String? in
                 let pair = parameter.split(separator: "=", maxSplits: 1)
-                guard pair.count == 2, pair[0].trimmingOWS.lowercased() == "charset" else { return nil }
+                guard pair.count == 2, pair[0].trimmingOWS.isCaseInsensitivelyEqual(to: "charset") else { return nil }
                 var value = pair[1].trimmingOWS
                 if value.count >= 2, value.first == "\"", value.last == "\"" { value = value.dropFirst().dropLast() }
                 return value.lowercased()
