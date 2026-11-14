@@ -75,7 +75,8 @@ let benchmarks: @Sendable () -> Void = {
 
     // MARK: Building entries
 
-    Benchmark("Build request, JSON body", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("Build request, JSON body", configuration: .init(timeUnits: .nanoseconds, scalingFactor: .kilo)) {
+        benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(
                 HAR.Request(
@@ -84,7 +85,8 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    Benchmark("Build response, JSON body", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("Build response, JSON body", configuration: .init(timeUnits: .nanoseconds, scalingFactor: .kilo)) {
+        benchmark in
         for _ in benchmark.scaledIterations {
             blackHole(
                 HAR.Response(
@@ -93,7 +95,8 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    Benchmark("Build response, binary body", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("Build response, binary body", configuration: .init(timeUnits: .nanoseconds, scalingFactor: .kilo)) {
+        benchmark in
         let headers = [HAR.Header(name: "Content-Type", value: "image/png")]
         for _ in benchmark.scaledIterations {
             blackHole(
@@ -102,7 +105,7 @@ let benchmarks: @Sendable () -> Void = {
         }
     }
 
-    Benchmark("Build entry", configuration: .init(scalingFactor: .kilo)) { benchmark in
+    Benchmark("Build entry", configuration: .init(timeUnits: .nanoseconds, scalingFactor: .kilo)) { benchmark in
         for index in benchmark.scaledIterations { blackHole(Traffic.entry(index)) }
     }
 

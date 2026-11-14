@@ -47,3 +47,8 @@ jobs:
         run: swift test
       - name: Architecture rules
         run: swift test --package-path Architecture
+      - name: Build benchmarks
+        env:
+          # The runner has no jemalloc; building only, so malloc counting is not needed.
+          BENCHMARK_DISABLE_JEMALLOC: "true"
+        run: swift build --package-path Benchmarks
