@@ -28,14 +28,8 @@ enum Detect {
     /// `fatalError(…)`, `precondition(…)`, `try!`, `as!` and force unwraps (`value!`).
     static func traps(in scope: Scope) -> [Match<Syntax>] {
         let calls = scope.calls(named: trappingFunctions).filter { $0.node.receiver == nil }
-        let forceTries = scope.containing("try!").nodes(of: TryExprSyntax.self) {
-            $0.node.questionOrExclamationMark?.tokenKind == .exclamationMark
-        }
-        let forceCasts = scope.containing("as!").nodes(of: UnresolvedAsExprSyntax.self) {
-            $0.node.questionOrExclamationMark?.tokenKind == .exclamationMark
-        }
-        let unwraps = scope.containing("!").nodes(of: ForceUnwrapExprSyntax.self)
-        return calls.map(\.erased) + forceTries.map(\.erased) + forceCasts.map(\.erased) + unwraps.map(\.erased)
+        return calls.map(\.erased) + scope.forcedTries.map(\.erased) + scope.forcedCasts
+            + scope.forceUnwraps.map(\.erased)
     }
 
     /// `import Foundation` anywhere but the `#else` of `#if canImport(FoundationEssentials)`.
@@ -78,28 +72,6 @@ enum Detect {
         return structs + enums
     }
 
-    /// `@unchecked Sendable` conformances with no comment on the declaration that makes them.
-    static func uncommentedUncheckedSendable(in scope: Scope) -> [Match<AttributeSyntax>] {
-        scope.containing("@unchecked").nodes(of: AttributeSyntax.self) { match in
-            guard match.node.attributeName.trimmedDescription == "unchecked" else { return false }
-            let declaration = sequence(first: Syntax(match.node), next: \.parent).first { $0.is(DeclSyntax.self) }
-            return declaration?.attachedComments.isEmpty ?? true
-        }
-    }
-
-    /// `import XCTest`.
-    static func xcTestImports(in scope: Scope) -> [Match<ImportDeclSyntax>] {
-        scope.imports(of: "XCTest")
-    }
-
-    /// `withKnownIssue { … }` whose first argument is not a string literal: the reason.
-    static func unexplainedKnownIssues(in scope: Scope) -> [Match<FunctionCallExprSyntax>] {
-        scope.calls(named: "withKnownIssue").filter { call in
-            guard let first = call.node.arguments.first, first.label == nil else { return true }
-            return !first.expression.is(StringLiteralExprSyntax.self)
-        }
-    }
-
     /// `try` inside an `#expect` or `#require` argument that does not itself start with `try`. A `try` inside a
     /// closure argument is in a throwing closure, so it is not one.
     static func nestedTryInExpectations(in scope: Scope) -> [Match<TryExprSyntax>] {
@@ -120,12 +92,6 @@ enum Detect {
         return expression.as(SequenceExprSyntax.self)?.elements.first?.is(TryExprSyntax.self) == true
     }
 
-    /// The `.disabled(…)` trait, wherever a test or suite takes it.
-    static func disabledTests(in scope: Scope) -> [Match<FunctionCallExprSyntax>] {
-        scope.calls(named: "disabled").filter { call in
-            call.node.receiver == nil && call.node.calledExpression.is(MemberAccessExprSyntax.self)
-        }
-    }
 }
 
 /// The `try` expressions under a node, outside closures.
