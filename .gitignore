@@ -6,3 +6,8 @@ xcuserdata/
 DerivedData/
 *.xcodeproj
 Package.resolved
+/Architecture/.build
+/Architecture/.swiftpm
+/Benchmarks/.build
+/Benchmarks/.swiftpm
+/Benchmarks/.benchmarkBaselines
