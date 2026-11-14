@@ -62,7 +62,18 @@ extension HAR {
 
         /// The sum of the available timings, which is ``Entry/time``.
         var total: Double {
-            [blocked, dns, connect, send, wait, receive].compactMap { $0 }.filter { $0 >= 0 }.reduce(0, +)
+            // Summed in phase order, without allocating an array per call.
+            var total = 0.0
+            func add(_ value: Double?) {
+                if let value, value >= 0 { total += value }
+            }
+            add(blocked)
+            add(dns)
+            add(connect)
+            add(send)
+            add(wait)
+            add(receive)
+            return total
         }
     }
 
