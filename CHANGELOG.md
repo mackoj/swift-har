@@ -2,6 +2,12 @@
 
 All notable changes to this package. Versions follow [Semantic Versioning](https://semver.org); before 1.0, a minor version may contain breaking changes, listed under **Breaking**.
 
+## 0.1.1 — 2026-11-14
+
+### Changed
+
+- Building requests, responses and entries is about 25% faster with a fifth fewer allocations; writing and reading HAR files allocates 2 to 5% less. Behaviour is unchanged. Numbers and what changed are in `docs/performance.md`.
+
 ## 0.1.0 — 2026-10-30
 
 First release.
