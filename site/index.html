@@ -1,0 +1,546 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>swift-har · HAR files from Swift</title>
+<meta name="description" content="Export HTTP traffic as HTTP Archive (HAR) 1.2 from Swift. Typed Codable models, builders that turn a request and its response into a HAR entry, lenient decoding and deterministic JSON. Apple platforms and Linux.">
+<meta property="og:title" content="swift-har · HAR files from Swift">
+<meta property="og:description" content="Build HAR 1.2 entries from your requests and responses and write the file browsers, Charles and Proxyman open. No dependencies, Swift 6, Linux-ready.">
+<meta property="og:type" content="website">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231f6fd9'/%3E%3Cpath d='M6 9h8M10 15h12M14 21h12' stroke='%23fff' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #fbfaf8;
+  --surface: #ffffff;
+  --surface-2: #f3f1ed;
+  --text: #1c1a17;
+  --muted: #5d5850;
+  --line: #e4e0d8;
+  --accent: #1f6fd9;
+  --accent-ink: #ffffff;
+  --accent-soft: #dde9fb;
+  --code-bg: #1d1b19;
+  --code-text: #ece8e1;
+  --code-muted: #8f877b;
+  --tok-key: #ff8a65;
+  --tok-str: #a5d6a7;
+  --tok-type: #81c7f5;
+  --tok-num: #e6c07b;
+  --shadow: 0 1px 2px rgb(28 26 23 / 6%), 0 8px 24px rgb(28 26 23 / 6%);
+  --radius: 14px;
+  --max: 1120px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #141311;
+    --surface: #1c1a18;
+    --surface-2: #23211e;
+    --text: #f1ede6;
+    --muted: #a8a196;
+    --line: #34312c;
+    --accent: #5a9cff;
+    --accent-ink: #08111a;
+    --accent-soft: #18263a;
+    --code-bg: #0f0e0d;
+    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 8px 24px rgb(0 0 0 / 25%);
+  }
+}
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  margin: 0;
+  overflow-x: clip;
+  background: var(--bg);
+  color: var(--text);
+  font: 17px/1.6 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+code, pre { font: 14px/1.55 ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+/* Grid and flex children may shrink below their content, so code scrolls inside its box instead of widening the page. */
+.grid > *, .install > *, .features > *, .cases > *, .flow > *, .stats > *, .rows > * { min-width: 0; }
+:not(pre) > code { overflow-wrap: anywhere; background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: .05em .35em; font-size: .88em; }
+.wrap { max-width: var(--max); margin: 0 auto; padding: 0 20px; }
+section { padding: 88px 0; }
+section + section { border-top: 1px solid var(--line); }
+h1, h2, h3 { line-height: 1.15; letter-spacing: -.02em; margin: 0; }
+h2 { font-size: clamp(28px, 4vw, 40px); }
+h3 { font-size: 19px; letter-spacing: -.01em; }
+.eyebrow { font-size: 13px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+.lead { color: var(--muted); font-size: 19px; max-width: 680px; margin: 16px 0 0; }
+
+/* Navigation */
+nav { position: sticky; top: 0; z-index: 10; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: saturate(1.4) blur(12px); border-bottom: 1px solid var(--line); }
+nav .wrap { display: flex; align-items: center; gap: 24px; height: 60px; }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; color: var(--text); text-decoration: none; }
+.brand svg { width: 26px; height: 26px; }
+nav .links { display: flex; gap: 22px; margin-left: auto; font-size: 15px; }
+nav .links a { color: var(--muted); text-decoration: none; }
+nav .links a:hover { color: var(--text); }
+@media (max-width: 720px) { nav .links a:not(.gh) { display: none; } }
+
+/* Hero */
+.hero { position: relative; overflow: hidden; padding: 96px 0 88px; }
+.hero::before {
+  /* A faint waterfall, as in a browser's network panel, behind the title. */
+  content: ""; position: absolute; inset: 0; z-index: -1; opacity: .5;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 22px, var(--line) 22px 23px),
+    repeating-linear-gradient(90deg, var(--line) 0 1px, transparent 1px 96px);
+  mask-image: radial-gradient(ellipse 70% 60% at 70% 30%, #000 10%, transparent 75%);
+}
+.hero .grid { display: grid; grid-template-columns: 1.05fr 1fr; gap: 56px; align-items: center; }
+@media (max-width: 960px) { .hero .grid { grid-template-columns: 1fr; gap: 40px; } }
+.hero h1 { font-size: clamp(40px, 6vw, 64px); }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.pills { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; padding: 0; list-style: none; }
+.pills li { font-size: 13px; font-weight: 600; padding: 4px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.button { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 10px; font-weight: 600; font-size: 16px; text-decoration: none; border: 1px solid var(--line); color: var(--text); background: var(--surface); }
+.button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.button:hover { filter: brightness(1.05); }
+.button svg { width: 18px; height: 18px; }
+
+/* Code */
+.code { background: var(--code-bg); color: var(--code-text); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.code .bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; border-bottom: 1px solid rgb(255 255 255 / 7%); color: var(--code-muted); font-size: 13px; }
+.code .bar i { width: 11px; height: 11px; border-radius: 50%; background: #3a3632; display: inline-block; }
+.code .bar span { margin-left: 8px; }
+.code pre { margin: 0; padding: 20px; overflow-x: auto; }
+.hero .code pre { font-size: 13.5px; }
+.tok-k { color: var(--tok-key); }
+.tok-s { color: var(--tok-str); }
+.tok-t { color: var(--tok-type); }
+.tok-n { color: var(--tok-num); }
+.tok-c { color: var(--code-muted); font-style: italic; }
+
+/* What is Arazzo */
+.flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 44px; counter-reset: step; }
+@media (max-width: 860px) { .flow { grid-template-columns: 1fr; } }
+.step { position: relative; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow); }
+.step::before { counter-increment: step; content: "Step " counter(step); display: block; font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+.step h3 { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 17px; }
+.step p { color: var(--muted); font-size: 15px; margin: 8px 0 0; }
+.step code { font-size: 12.5px; }
+.flow-note { color: var(--muted); font-size: 15px; margin-top: 18px; }
+
+/* Derived fields */
+.rows { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px 28px; margin-top: 36px; }
+@media (max-width: 760px) { .rows { grid-template-columns: 1fr; } }
+.row { display: flex; gap: 14px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.row code { flex: none; }
+.row span { color: var(--muted); font-size: 15px; }
+
+/* Features */
+.features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 44px; }
+@media (max-width: 960px) { .features { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 640px) { .features { grid-template-columns: 1fr; } }
+.feature { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 24px; }
+.feature .icon { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; margin-bottom: 14px; }
+.feature .icon svg { width: 22px; height: 22px; }
+.feature p { color: var(--muted); font-size: 15.5px; margin: 8px 0 0; }
+
+/* Tabs */
+.tabs { margin-top: 40px; }
+.tablist { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+.tablist button { font: inherit; font-size: 15px; font-weight: 600; padding: 8px 16px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); cursor: pointer; }
+.tablist button[aria-selected="true"] { background: var(--text); border-color: var(--text); color: var(--bg); }
+.panel p { color: var(--muted); margin: 0 0 14px; max-width: 760px; }
+.js .panel[hidden] { display: none; }
+.panel + .panel { margin-top: 28px; }
+.js .panel + .panel { margin-top: 0; }
+
+/* Use cases */
+.cases { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 44px; }
+@media (max-width: 760px) { .cases { grid-template-columns: 1fr; } }
+.case { padding: 24px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--surface); }
+.case p { color: var(--muted); font-size: 15.5px; margin: 8px 0 0; }
+
+/* Numbers */
+.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-top: 44px; }
+@media (max-width: 860px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+.stat { padding: 22px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.stat b { display: block; font-size: 34px; letter-spacing: -.02em; line-height: 1.1; }
+.stat span { color: var(--muted); font-size: 14.5px; }
+table { width: 100%; border-collapse: collapse; margin-top: 28px; font-size: 15px; }
+th, td { text-align: left; padding: 11px 12px; border-bottom: 1px solid var(--line); }
+th { color: var(--muted); font-weight: 600; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+td.num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table-scroll { overflow-x: auto; }
+.small { color: var(--muted); font-size: 14px; margin-top: 12px; }
+
+/* Install */
+.install { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; margin-top: 40px; }
+@media (max-width: 900px) { .install { grid-template-columns: 1fr; } }
+.install ul { padding-left: 20px; color: var(--muted); }
+.install li { margin: 6px 0; }
+.copy { margin-left: auto; font: inherit; font-size: 12.5px; color: var(--code-muted); background: transparent; border: 1px solid rgb(255 255 255 / 12%); border-radius: 6px; padding: 3px 9px; cursor: pointer; }
+.copy:hover { color: var(--code-text); }
+
+footer { padding: 40px 0 56px; border-top: 1px solid var(--line); color: var(--muted); font-size: 14.5px; }
+footer .wrap { display: flex; flex-wrap: wrap; gap: 12px 28px; align-items: center; }
+footer a { color: var(--muted); }
+</style>
+</head>
+<body>
+
+<nav aria-label="Main">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#1f6fd9"/><path d="M6 9h8M10 15h12M14 21h12" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg>
+      swift-har
+    </a>
+    <div class="links">
+      <a href="#har">What is HAR</a>
+      <a href="#features">Features</a>
+      <a href="#tour">Code tour</a>
+      <a href="#install">Install</a>
+      <a class="gh" href="https://github.com/mackoj/swift-har">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<main id="top">
+
+<section class="hero">
+  <div class="wrap grid">
+    <div>
+      <ul class="pills" aria-label="At a glance">
+        <li>HAR 1.2</li>
+        <li>Swift 6</li>
+        <li>Apple platforms &amp; Linux</li>
+        <li>No dependencies</li>
+        <li>MIT</li>
+      </ul>
+      <h1>Your app's traffic,<br><em>as a HAR file.</em></h1>
+      <p class="lead">Build an HTTP Archive entry from each request and its response, collect them in a log, and write the file that every browser's network panel, Charles, Proxyman and HAR viewer opens. swift-har never touches the network: it works with whatever HTTP client you already use.</p>
+      <div class="cta">
+        <a class="button primary" href="#install">Get started</a>
+        <a class="button" href="https://github.com/mackoj/swift-har">
+          <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+          View on GitHub
+        </a>
+        <a class="button" href="https://swiftpackageindex.com/mackoj/swift-har/documentation/harkit">Documentation</a>
+      </div>
+    </div>
+    <div class="code" aria-label="Example">
+      <div class="bar"><i></i><i></i><i></i><span>NetworkLogger.swift</span></div>
+<pre><code class="swift">import HARKitURLSession
+
+let entry = HAR.Entry(
+    startedDateTime: start,                    // you know when you sent it
+    request: try HAR.Request(sentRequest, httpVersion: "h2"),
+    response: HAR.Response(httpResponse, body: body, httpVersion: "h2"),
+    timings: try HAR.Timings(send: 0.4, wait: 85.4, receive: 3.1)
+)
+let log = HAR.Log(creator: .init(name: "MyApp", version: "1.0"), entries: [entry])
+let har = try HAR.Archive(log: log).jsonData(prettyPrinted: true)
+// Open it in Safari, Chrome, Firefox, Charles or Proxyman.</code></pre>
+    </div>
+  </div>
+</section>
+
+<section id="har">
+  <div class="wrap">
+    <p class="eyebrow">What is HAR</p>
+    <h2>The format every network inspector speaks.</h2>
+    <p class="lead"><a href="http://www.softwareishard.com/blog/har-12-spec/">HAR 1.2</a> is the JSON file browsers export from their network panel: every request, response, header, cookie, body and timing of a session. Attach one to a bug report, replay it in a debugging proxy, or diff two of them in a test. Writing a correct one by hand means repeating the query string, cookies, sizes and total time in exactly the shape the specification asks for. swift-har derives those fields from what you pass in:</p>
+    <div class="rows" aria-label="Derived fields">
+      <div class="row"><code>request.url</code><span>the URL without its fragment</span></div>
+      <div class="row"><code>request.queryString</code><span>the URL query, split on <code>&amp;</code> and percent-decoded</span></div>
+      <div class="row"><code>request.cookies</code><span>the <code>Cookie</code> headers</span></div>
+      <div class="row"><code>request.postData</code><span>the body as text, or form <code>params</code>, when it is UTF-8 text</span></div>
+      <div class="row"><code>response.content</code><span>plain text for UTF-8 text, base64 with <code>encoding</code> otherwise</span></div>
+      <div class="row"><code>response.cookies</code><span><code>Set-Cookie</code> headers, <code>Expires</code> converted to ISO 8601</span></div>
+      <div class="row"><code>response.redirectURL</code><span>the <code>Location</code> header</span></div>
+      <div class="row"><code>bodySize</code><span>the byte count, or <code>-1</code> when a <code>Content-Encoding</code> hides it</span></div>
+      <div class="row"><code>headersSize</code><span><code>-1</code>: the bytes on the wire depend on the HTTP stack</span></div>
+      <div class="row"><code>entry.time</code><span>the sum of the timings, as HAR 1.2 requires</span></div>
+    </div>
+  </div>
+</section>
+
+<section id="features">
+  <div class="wrap">
+    <p class="eyebrow">Features</p>
+    <h2>Correct HAR files, without the bookkeeping.</h2>
+    <p class="lead">A small API that follows the specification closely, writes down every choice it leaves open, and refuses to make up the data it was not given.</p>
+    <div class="features">
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg></div>
+        <h3>Every HAR 1.2 object, typed</h3>
+        <p>One <code>Codable</code>, <code>Hashable</code>, <code>Sendable</code> value type per object, from <code>log</code> to <code>timings</code>. Mutually exclusive fields are enums, so <code>text</code> and <code>params</code> can never both be set.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="9"/></svg></div>
+        <h3>Honest about missing data</h3>
+        <p>The library never reads the clock, invents timings or guesses a body. Unknown sizes are <code>-1</code> and unknown optional fields are left out, as the specification prescribes. You supply what only you know.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg></div>
+        <h3>Builders that do the tedious part</h3>
+        <p>Pass a method, URL, headers and body. You get the query string, request and <code>Set-Cookie</code> cookies (RFC 6265 parsing), post data or base64 content, redirect URL and sizes.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3l4 4-4 4M3 7h18M7 21l-4-4 4-4M21 17H3"/></svg></div>
+        <h3>Reads what other tools write</h3>
+        <p>Decoding is lenient: a byte order mark, custom <code>_fields</code> and the out-of-spec values browsers and proxies produce load fine. Writing is deterministic, with sorted keys.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M2 12h20"/></svg></div>
+        <h3>Works with any HTTP client</h3>
+        <p><code>HARKit</code> takes plain values, so it works with URLSession, AsyncHTTPClient, Alamofire or your own stack. <code>HARKitURLSession</code> adds converters for <code>URLRequest</code>, <code>HTTPURLResponse</code> and task metrics.</p>
+      </div>
+      <div class="feature">
+        <div class="icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/></svg></div>
+        <h3>Small, Swift 6, Linux-ready</h3>
+        <p>No dependencies. <code>HARKit</code> imports FoundationEssentials where it exists, so on Linux it links neither full Foundation nor FoundationNetworking. Strict concurrency throughout.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="tour">
+  <div class="wrap">
+    <p class="eyebrow">Code tour</p>
+    <h2>A few lines per exchange.</h2>
+    <p class="lead">These snippets come from the README, which the test suite compiles and runs, so they stay correct.</p>
+    <div class="tabs">
+      <div class="tablist" role="tablist" aria-label="Examples">
+        <button role="tab" id="tab-build" aria-controls="panel-build" aria-selected="true">Build an entry</button>
+        <button role="tab" id="tab-write" aria-controls="panel-write" aria-selected="false">Write</button>
+        <button role="tab" id="tab-read" aria-controls="panel-read" aria-selected="false">Read</button>
+        <button role="tab" id="tab-urlsession" aria-controls="panel-urlsession" aria-selected="false">URLSession</button>
+        <button role="tab" id="tab-missing" aria-controls="panel-missing" aria-selected="false">Missing data</button>
+      </div>
+      <div class="panel" role="tabpanel" id="panel-build" aria-labelledby="tab-build">
+        <p>Describe one exchange with plain values. The builders derive the fields HAR repeats.</p>
+        <div class="code"><pre><code class="swift">import HARKit
+
+let request = HAR.Request(
+    method: "POST",
+    url: URL(string: "https://api.example.com/pets?limit=10#top")!,
+    httpVersion: "HTTP/1.1",
+    headers: [
+        HAR.Header(name: "Content-Type", value: "application/json"),
+        HAR.Header(name: "Cookie", value: "session=abc123"),
+    ],
+    body: Data(#"{"name":"Rex"}"#.utf8)
+)
+let response = HAR.Response(
+    status: 201,
+    statusText: "Created",
+    httpVersion: "HTTP/1.1",
+    headers: [
+        HAR.Header(name: "Content-Type", value: "application/json"),
+        HAR.Header(name: "Set-Cookie", value: "theme=dark; Path=/; HttpOnly"),
+    ],
+    body: Data(#"{"id":42}"#.utf8)
+)
+let timings = try HAR.Timings(dns: -1, connect: -1, send: 1.2, wait: 85.4, receive: 3.1)
+
+let entry = HAR.Entry(startedDateTime: requestStart, request: request, response: response, timings: timings)</code></pre></div>
+      </div>
+      <div class="panel" role="tabpanel" id="panel-write" aria-labelledby="tab-write" hidden>
+        <p>Collect entries in a log and serialize it. The same archive always gives the same bytes.</p>
+        <div class="code"><pre><code class="swift">let log = HAR.Log(creator: HAR.Creator(name: "MyApp", version: "1.0"), entries: [entry])
+let data = try HAR.Archive(log: log).jsonData(prettyPrinted: true)
+// Write `data` to a file named with a `.har` extension.</code></pre></div>
+      </div>
+      <div class="panel" role="tabpanel" id="panel-read" aria-labelledby="tab-read" hidden>
+        <p>Load a HAR file exported by a browser or a proxy.</p>
+        <div class="code"><pre><code class="swift">let archive = try HAR.Archive(json: data)
+for entry in archive.log.entries {
+    print(entry.request.method, entry.request.url, entry.response.status, entry.time)
+}</code></pre></div>
+      </div>
+      <div class="panel" role="tabpanel" id="panel-urlsession" aria-labelledby="tab-urlsession" hidden>
+        <p>Turn a finished <code>URLSessionTask</code> and its metrics into an entry.</p>
+        <div class="code"><pre><code class="swift">import HARKitURLSession
+
+/// Call from `urlSession(_:task:didFinishCollecting:)` with the body you received.
+func harEntry(task: URLSessionTask, body: Data, metrics: URLSessionTaskMetrics) throws -&gt; HAR.Entry? {
+    guard let sent = task.currentRequest ?? task.originalRequest,
+        let received = task.response as? HTTPURLResponse,
+        let transaction = metrics.transactionMetrics.last,
+        let timings = HAR.Timings(transaction)
+    else { return nil }
+    let httpVersion = transaction.networkProtocolName ?? ""
+    return HAR.Entry(
+        startedDateTime: transaction.fetchStartDate ?? metrics.taskInterval.start,
+        request: try HAR.Request(sent, httpVersion: httpVersion),
+        response: HAR.Response(received, body: body, httpVersion: httpVersion),
+        timings: timings
+    )
+}</code></pre></div>
+      </div>
+      <div class="panel" role="tabpanel" id="panel-missing" aria-labelledby="tab-missing" hidden>
+        <p>When you do not know a value, the types make you say so rather than guess.</p>
+        <div class="code"><pre><code class="swift">// Nothing measured? Say so instead of inventing numbers.
+let unmeasured = try HAR.Timings(send: 0, wait: 0, receive: 0, comment: "Timings were not measured")
+
+// The request failed: write the placeholder browsers use, and say why.
+let failed = HAR.Response(
+    status: 0, statusText: "", httpVersion: "",
+    content: HAR.Content(size: 0, mimeType: ""),
+    comment: "The request timed out"
+)</code></pre></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="uses">
+  <div class="wrap">
+    <p class="eyebrow">Built for</p>
+    <h2>Anywhere you want to see the traffic.</h2>
+    <div class="cases">
+      <div class="case">
+        <h3>In-app network debuggers</h3>
+        <p>Let testers export a session from a debug menu and open it in Safari's or Chrome's network panel, with headers, bodies and a timing waterfall.</p>
+      </div>
+      <div class="case">
+        <h3>Bug reports and support</h3>
+        <p>Attach the exact requests and responses to a crash report or a ticket. Redact <code>Authorization</code> headers and bodies before building entries, and the rest is the real thing.</p>
+      </div>
+      <div class="case">
+        <h3>Tests and CI artifacts</h3>
+        <p>Record what an integration test sent and received as a HAR file next to the failure, or decode a recorded file to drive a mock server. Models are <code>Hashable</code>, so whole entries compare in one <code>#expect</code>.</p>
+      </div>
+      <div class="case">
+        <h3>Servers and command-line tools</h3>
+        <p>Log outgoing calls from a Vapor or Hummingbird service, or a script, on Linux. <code>HARKit</code> needs only FoundationEssentials there.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="quality">
+  <div class="wrap">
+    <p class="eyebrow">Quality and speed</p>
+    <h2>Checked against the specification. Measured on every change.</h2>
+    <div class="stats">
+      <div class="stat"><b>17</b><span>HAR 1.2 objects, each a <code>Codable</code>, <code>Hashable</code>, <code>Sendable</code> value type</span></div>
+      <div class="stat"><b>0</b><span>dependencies for <code>HARKit</code>; FoundationEssentials on Linux, no FoundationNetworking</span></div>
+      <div class="stat"><b>4</b><span>CI builds on every change: Linux on Swift 6.0, 6.1 and 6.2, and macOS, plus API-breakage, DocC and architecture checks</span></div>
+      <div class="stat"><b>1.35×</b><span>faster entry building in 0.1.1, with a fifth fewer allocations</span></div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead><tr><th>Benchmark (p50, Apple silicon)</th><th>0.1.0</th><th>0.1.1</th></tr></thead>
+        <tbody>
+          <tr><td>Build an entry from a request and its response</td><td class="num">25.9 µs</td><td class="num">19.2 µs</td></tr>
+          <tr><td>Build a request (query string, cookies, JSON body)</td><td class="num">9.5 µs</td><td class="num">8.1 µs</td></tr>
+          <tr><td>Build a response (two Set-Cookie headers, JSON body)</td><td class="num">15.9 µs</td><td class="num">10.9 µs</td></tr>
+          <tr><td>Encode a 1000-entry log to JSON</td><td class="num">59.7 ms</td><td class="num">58.4 ms</td></tr>
+          <tr><td>Decode a 1000-entry log</td><td class="num">71.8 ms</td><td class="num">70.5 ms</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="small">Benchmarks use <a href="https://github.com/ordo-one/benchmark">package-benchmark</a> and live in the repository: <code>swift package --package-path Benchmarks benchmark</code>. Details in <a href="https://github.com/mackoj/swift-har/blob/main/docs/performance.md">docs/performance.md</a>.</p>
+  </div>
+</section>
+
+<section id="install">
+  <div class="wrap">
+    <p class="eyebrow">Install</p>
+    <h2>Add it to your package.</h2>
+    <div class="install">
+      <div class="code">
+        <div class="bar"><span>Package.swift</span><button class="copy" type="button" data-copy="install-snippet">Copy</button></div>
+<pre><code class="swift" id="install-snippet">dependencies: [
+    .package(url: "https://github.com/mackoj/swift-har.git", from: "0.1.1"),
+],
+targets: [
+    .target(name: "MyApp", dependencies: [
+        .product(name: "HARKit", package: "swift-har"),
+        // or, to convert URLRequest, HTTPURLResponse and task metrics:
+        .product(name: "HARKitURLSession", package: "swift-har"),
+    ]),
+]</code></pre>
+      </div>
+      <div>
+        <ul>
+          <li><strong>Swift 6.0+</strong> on Linux, macOS 13+, iOS 16+, tvOS 16+, watchOS 9+ and visionOS 1+.</li>
+          <li><strong><code>HARKit</code></strong>: models, builders from plain values, and JSON. No dependencies.</li>
+          <li><strong><code>HARKitURLSession</code></strong>: converters for <code>URLRequest</code>, <code>HTTPURLResponse</code> and <code>URLSessionTaskTransactionMetrics</code>. Re-exports <code>HARKit</code>.</li>
+          <li>API reference on the <a href="https://swiftpackageindex.com/mackoj/swift-har/documentation/harkit">Swift Package Index</a>; guide, missing-data advice and specification notes in the <a href="https://github.com/mackoj/swift-har#readme">README</a>.</li>
+        </ul>
+        <div class="cta">
+          <a class="button primary" href="https://github.com/mackoj/swift-har">Star it on GitHub</a>
+          <a class="button" href="https://github.com/mackoj/swift-har/issues">Ask a question</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>swift-har is MIT licensed.</span>
+    <a href="https://github.com/mackoj/swift-har">GitHub</a>
+    <a href="https://github.com/mackoj/swift-har/releases">Releases</a>
+    <a href="https://swiftpackageindex.com/mackoj/swift-har">Swift Package Index</a>
+    <a href="https://github.com/ahmadnassri/har-spec/blob/master/versions/1.2.md">HAR 1.2 specification</a>
+  </div>
+</footer>
+
+<script>
+// Tabs: without JavaScript every example is shown, one after another.
+document.documentElement.classList.add("js");
+const tabs = [...document.querySelectorAll('[role="tab"]')];
+function select(tab, focus) {
+  for (const t of tabs) {
+    const on = t === tab;
+    t.setAttribute("aria-selected", on);
+    t.tabIndex = on ? 0 : -1;
+    document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+  }
+  if (focus) tab.focus();
+}
+tabs.forEach((tab, i) => {
+  tab.addEventListener("click", () => select(tab));
+  tab.addEventListener("keydown", (e) => {
+    const step = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+    if (step) select(tabs[(i + step + tabs.length) % tabs.length], true);
+  });
+});
+select(tabs[0]);
+
+// A small Swift highlighter: comments, strings, keywords, types and numbers.
+const keywords = new Set("let var func for in where if case switch default guard else try throws return import struct enum extension init self true false nil".split(" "));
+const escape = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+const token = /(\/\/[^\n]*)|("(?:[^"\\\n]|\\.)*")|\b([A-Z][A-Za-z0-9]*)\b|\b([a-z]+)\b|\b(\d+(?:\.\d+)?)\b/g;
+for (const code of document.querySelectorAll("code.swift")) {
+  const text = code.textContent;
+  let html = "", last = 0;
+  for (const m of text.matchAll(token)) {
+    html += escape(text.slice(last, m.index));
+    const [all, comment, string, type, word, number] = m;
+    if (comment) html += `<span class="tok-c">${escape(all)}</span>`;
+    else if (string) html += `<span class="tok-s">${escape(all)}</span>`;
+    else if (type) html += `<span class="tok-t">${escape(all)}</span>`;
+    else if (word && keywords.has(word)) html += `<span class="tok-k">${escape(all)}</span>`;
+    else if (number) html += `<span class="tok-n">${escape(all)}</span>`;
+    else html += escape(all);
+    last = m.index + all.length;
+  }
+  code.innerHTML = html + escape(text.slice(last));
+}
+
+// Copy buttons.
+for (const button of document.querySelectorAll("[data-copy]")) {
+  button.addEventListener("click", async () => {
+    const text = document.getElementById(button.dataset.copy).textContent;
+    try { await navigator.clipboard.writeText(text); button.textContent = "Copied"; }
+    catch { button.textContent = "Select and copy"; }
+    setTimeout(() => (button.textContent = "Copy"), 1600);
+  });
+}
+</script>
+</body>
+</html>
