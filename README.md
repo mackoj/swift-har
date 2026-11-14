@@ -1,8 +1,10 @@
 # swift-har
 
 [![CI](https://github.com/mackoj/swift-har/actions/workflows/ci.yml/badge.svg)](https://github.com/mackoj/swift-har/actions/workflows/ci.yml)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmackoj%2Fswift-har%2Fbadge%3Ftype%3Dswift-versions)](https://swiftpackageindex.com/mackoj/swift-har)
+[![](https://img.shields.io/endpoint?url=https%3A%2F%2Fswiftpackageindex.com%2Fapi%2Fpackages%2Fmackoj%2Fswift-har%2Fbadge%3Ftype%3Dplatforms)](https://swiftpackageindex.com/mackoj/swift-har)
 
-Export HTTP traffic as [HTTP Archive (HAR) 1.2](http://www.softwareishard.com/blog/har-12-spec/) JSON from Swift: build a HAR entry from a request and its response, collect entries in a log, and write the file that browsers' developer tools, Charles, Proxyman and HAR viewers open.
+Export HTTP traffic as [HTTP Archive (HAR) 1.2](http://www.softwareishard.com/blog/har-12-spec/) JSON from Swift: build a HAR entry from a request and its response, collect entries in a log, and write the file that browsers' developer tools, Charles, Proxyman and HAR viewers open. Overview and examples: [mackoj.github.io/swift-har](https://mackoj.github.io/swift-har/).
 
 - **Export only.** The package represents and serializes traffic. It makes no network requests, does not capture traffic for you and works with any HTTP client.
 - **Honest about missing data.** It never reads the clock, invents timings or guesses a body. Unknown sizes are `-1` and unknown optional fields are omitted, as HAR 1.2 prescribes. Values only you know (start time, timings, a response) are required inputs.
@@ -14,7 +16,7 @@ Export HTTP traffic as [HTTP Archive (HAR) 1.2](http://www.softwareishard.com/bl
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/mackoj/swift-har.git", from: "0.1.0"),
+    .package(url: "https://github.com/mackoj/swift-har.git", from: "0.1.1"),
 ],
 targets: [
     .target(name: "MyApp", dependencies: [
@@ -179,6 +181,12 @@ Where HAR 1.2 leaves a choice open, or where this package departs from the lette
 - **Custom fields** (`_name`) are neither written nor kept when decoding.
 - **Cache.** `HAR.Cache()` is `{}`, meaning no information. `.noEntry` writes `null`.
 - **Privacy.** A HAR file contains whatever you put in it, cookies and `Authorization` headers included. Redact headers and bodies before building entries from sensitive traffic.
+
+## Development
+
+- **Performance.** `Benchmarks/` is a separate package on package-benchmark that measures building entries, encoding a large log and decoding it. To run it: `swift package --package-path Benchmarks benchmark`. [docs/performance.md](docs/performance.md) explains how to compare and profile, and lists what has paid off.
+- **Architecture rules.** `Architecture/` checks the mechanical part of [CODING_STANDARDS.md](CODING_STANDARDS.md) and [CONSTRAINTS.md](CONSTRAINTS.md) with [swift-llm-check](https://github.com/mackoj/swift-llm-check): purity, import budgets, model conformances and test hygiene. To run it: `swift test --package-path Architecture` (macOS). The rules are listed in [docs/architecture-rules.md](docs/architecture-rules.md).
+- Contributor and agent notes are in [AGENTS.md](AGENTS.md). Decisions are in [docs/adr](docs/adr).
 
 ## Sources
 

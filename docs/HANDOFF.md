@@ -2,7 +2,7 @@
 
 Living status of the work, so anyone (human or agent) can pick it up after an interruption. Update it in every pull request: move items between sections and keep "Next" ordered.
 
-Last updated: 2026-10-30 (after PR #3)
+Last updated: 2026-11-14 (after PR #8)
 
 ## Goal
 
@@ -36,11 +36,16 @@ A Swift package that exports HTTP traffic as HAR 1.2 JSON, scoped to representin
 
 - PR #3 (merged): `HARKitURLSession`: `HAR.Request(_ URLRequest, httpVersion:)` (throws `HAR.URLRequestError.missingURL`), `HAR.Response(_ HTTPURLResponse, body:httpVersion:)`, `HAR.Timings(_ URLSessionTaskTransactionMetrics)` (compiles on Linux too; the date mapping is an internal initializer tested with `@testable`); README "From URLSession" section and its README test.
 
+- 0.1.0 tagged and released.
+- PR #5 (merged): `Architecture/` package with swift-llm-check rules, `.llm-check.yaml`, generated `docs/architecture-rules.md`, macOS CI step.
+- PR #6 (merged): `Benchmarks/` package (package-benchmark, `Tools/P50`, `Tools/Hotspots`, `scripts/profile.sh`, `docs/performance.md`), built in CI; faster entry building and date handling. Released as 0.1.1.
+- PR #7 (merged): `site/index.html` landing page and `pages.yml`, published at https://mackoj.github.io/swift-har/.
+- PR #8: README badges, site link, development section; repository description, homepage and topics.
+
 ## In progress
 
-- Nothing. `main` (after PR #3, `ea21781`) is green on every CI job and ready to be tagged.
+- Nothing.
 
 ## Next
 
-1. **Maintainer:** tag `0.1.0` on `ea21781` and publish the GitHub release with the `CHANGELOG.md` section as notes. The cloud session cannot do it: pushing tags is refused (HTTP 403) and creating releases is not permitted for that session type. From a local clone: `git fetch origin && git tag -a 0.1.0 ea21781 -m "swift-har 0.1.0" && git push origin 0.1.0`.
-2. Ideas, not committed to: HAR 1.3 `postData.encoding` behind an explicit opt-in; an optional redaction helper for `Authorization`/`Cookie` headers; DocC catalog with a getting-started article.
+1. Ideas, not committed to: HAR 1.3 `postData.encoding` behind an explicit opt-in; an optional redaction helper for `Authorization`/`Cookie` headers; DocC catalog with a getting-started article.
