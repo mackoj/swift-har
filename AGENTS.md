@@ -23,6 +23,7 @@ Read `CONSTRAINTS.md` before writing code. Do not weaken it to make a change pas
 
 ## Build and test
 - `swift build` and `swift test`; one test with `swift test --filter <Suite>/<test>`.
+- `swift test --package-path Architecture` (macOS) checks the mechanical rules in `docs/architecture-rules.md` with [swift-llm-check](https://github.com/mackoj/swift-llm-check). A failure prints the rule, why it exists and how to fix it. After changing `Architecture/Tests/ArchitectureTests/Rules.swift`, regenerate the document with `LLM_CHECK_RECORD=1 swift test --package-path Architecture`.
 - CI (`.github/workflows/ci.yml`) runs macOS and Linux on Swift 6.0, 6.1 and 6.2: code must compile on 6.0 and with swift-corelibs-foundation on Linux. Without a local Linux toolchain: `docker run --rm -v "$PWD":/src -w /src swift:6.0 swift test`.
 - Format before handing back Swift changes: `swift-format format --in-place --parallel --recursive Sources Tests Package.swift` (config in `.swift-format`). Use the Swift 6.3 toolchain's swift-format (`docker run --rm -v "$PWD":/src -w /src swift:6.3 swift-format …`): other versions wrap lines differently.
 - Pull requests also run `.github/workflows/soundness.yml`: swiftlang's soundness checks (format, DocC with warnings as errors, API breakage against the base branch, YAML lint, shellcheck, broken symlinks) plus actionlint and zizmor on the workflows. A deliberate API break is called out in the pull request.

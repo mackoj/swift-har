@@ -74,8 +74,9 @@ struct ResponseTests {
         let content = HAR.Content(body: body, mimeType: mimeType)
 
         // Then: decoding the base64 gives the exact bytes back.
+        let text = try #require(content.text)
         #expect(content.encoding == "base64")
-        #expect(Data(base64Encoded: try #require(content.text)) == body)
+        #expect(Data(base64Encoded: text) == body)
     }
 
     @Test func missingContentTypeGivesAnEmptyMimeType() {

@@ -22,6 +22,7 @@ Run these before handing back a code change; each must pass.
 | Public API | 0 breaking changes against the base branch, unless intended and called out in the pull request | `swift package diagnose-api-breaking-changes main` |
 | Documentation | 0 DocC warnings for the `.spi.yml` targets | Soundness workflow's documentation check (CI) |
 | Workflows and YAML | 0 findings | `actionlint`, `zizmor .github/workflows` and `yamllint --strict .` |
+| Architecture rules | 0 findings from the rules in [`docs/architecture-rules.md`](docs/architecture-rules.md) (purity, imports, model conformances, tests) | `swift test --package-path Architecture` (macOS) |
 | HARKit dependency budget | `HARKit` has no package dependencies; `import Foundation` appears only as the `#else` of `#if canImport(FoundationEssentials)`, and `FoundationNetworking` is never imported. Only `HARKitURLSession` may use Foundation and FoundationNetworking. | `Package.swift` review and `scripts/check-foundation-imports.sh` |
 
 Linux is the platform most likely to break (no Objective-C Foundation, older toolchains): CI runs Swift 6.0, 6.1 and 6.2 in Linux containers. When a change touches Foundation APIs or platform guards, say whether you checked it on Linux (for example `docker run --rm -v "$PWD":/src -w /src swift:6.0 swift test`) or leave it to CI. Darwin-only code (`#if canImport(Darwin)`) is compiled only by the macOS CI job: say so when you change it.
